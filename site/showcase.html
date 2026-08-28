@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="MLLM-5.3 primitive showcase.">
+    <title>MLLM-5.3 | Primitive showcase</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231d2628'/%3E%3Cpath d='M6 24V8h4l6 9 6-9h4v16h-4V14l-6 9-6-9v10Z' fill='%23b85435'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="styles.css?v=4">
+  </head>
+  <body>
+    <main class="showcase-page">
+      <header class="showcase-heading">
+        <div><span class="overline">MLLM-5.3 / component states</span><h1>Primitive showcase</h1></div>
+        <a class="text-link" href="index.html">Open editor</a>
+      </header>
+      <p class="showcase-intro">The editor is assembled from these real states. Use this page to inspect focus, loading, empty, and error behavior before composing the writing surface.</p>
+      <div class="showcase-grid">
+        <section class="showcase-card"><span class="overline">Controls</span><h2>Buttons and field</h2><div class="showcase-row"><button class="primary-button" type="button">Accept suggestion</button><button class="secondary-button" type="button">Dismiss</button><button class="secondary-button" type="button" disabled>Disabled</button></div><label class="showcase-field">Model size<select class="wide-select"><option>578K / fast</option><option>2.4M / balanced</option></select></label></section>
+        <section class="showcase-card"><span class="overline">Sampling</span><h2>Range control</h2><div class="section-label-row"><label for="showcase-range">Temperature</label><output for="showcase-range">0.25</output></div><input id="showcase-range" type="range" min="0" max="1" value="0.25" step="0.05"><div class="range-labels"><span>focused</span><span>varied</span></div><p class="showcase-note">Keyboard arrow keys move the value; the visible output stays in sync.</p></section>
+        <section class="showcase-card"><span class="overline">Suggestion</span><h2>Ready state</h2><div class="suggestion-tray showcase-tray"><div class="suggestion-topline"><span class="overline">Suggestion</span><span class="mono-caption">578K</span></div><p>It learns from the rhythm of the note without sending the note away.</p><div class="suggestion-actions"><span class="caption">Local continuation</span><button class="text-action" type="button">Accept <kbd>Tab</kbd></button></div></div></section>
+        <section class="showcase-card"><span class="overline">Status</span><h2>Loading, empty, error</h2><div class="state-stack"><div class="showcase-state"><span class="status-dot loading" aria-hidden="true"></span><span>Loading local model</span><span class="mono-caption">2.4M</span></div><div class="showcase-state is-empty"><span class="status-dot" aria-hidden="true"></span><span>No suggestion yet</span></div><div class="showcase-state is-error"><span class="status-dot error" aria-hidden="true"></span><span>Model file unavailable</span></div></div></section>
+        <section class="showcase-card showcase-keyboard"><span class="overline">Keyboard</span><h2>Editor shortcuts</h2><div class="shortcut-row"><kbd>Tab</kbd><span>accept suggestion</span></div><div class="shortcut-row"><kbd>Esc</kbd><span>dismiss suggestion</span></div><div class="shortcut-row"><kbd>⌘</kbd><kbd>↵</kbd><span>accept suggestion</span></div></section>
+      </div>
+    </main>
+    <script>
+      const showcaseRange = document.querySelector("#showcase-range");
+      const showcaseOutput = document.querySelector('output[for="showcase-range"]');
+      showcaseRange.addEventListener("input", () => {
+        showcaseOutput.textContent = Number(showcaseRange.value).toFixed(2);
+      });
+    </script>
+  </body>
+</html>
