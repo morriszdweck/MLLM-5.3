@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="MLLM-5.3 is a small, local-first autocomplete model family in a browser writing desk.">
+    <meta name="theme-color" content="#1D2628">
+    <title>MLLM-5.3 | Local autocomplete editor</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231d2628'/%3E%3Cpath d='M6 24V8h4l6 9 6-9h4v16h-4V14l-6 9-6-9v10Z' fill='%23b85435'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="styles.css?v=4">
+  </head>
+  <body>
+    <a class="skip-link" href="#editor">Skip to editor</a>
+    <div class="app-shell">
+      <header class="context-bar">
+        <div class="brand-lockup" aria-label="MLLM-5.3 local autocomplete editor">
+          <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+            <path d="M6 24V8h4l6 9 6-9h4v16h-4V14l-6 9-6-9v10Z" fill="currentColor"></path>
+          </svg>
+          <span class="brand-name">MLLM-5.3</span>
+          <span class="brand-divider" aria-hidden="true"></span>
+          <span class="brand-caption">Local autocomplete editor</span>
+        </div>
+        <div class="context-meta">
+          <label class="sr-only" for="model-select">Model size</label>
+          <select id="model-select" class="model-select">
+            <option value="578K">578K</option>
+            <option value="2.4M">2.4M</option>
+            <option value="6.0M">6.0M</option>
+          </select>
+          <span class="meta-divider" aria-hidden="true"></span>
+          <span id="load-status" class="load-state" data-state="loading">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span id="load-status-text">Loading local model</span>
+          </span>
+          <button id="inspector-toggle" class="icon-button mobile-only" type="button" aria-expanded="false" aria-controls="inspector" aria-label="Show model inspector">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+          </button>
+        </div>
+      </header>
+
+      <main class="workspace-grid">
+        <aside class="outline-rail" aria-label="Document outline">
+          <div class="panel-heading">
+            <span class="overline">Outline</span>
+            <button class="quiet-icon" type="button" aria-label="Collapse outline">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h9M5 17h14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>
+            </button>
+          </div>
+          <nav class="outline-nav" aria-label="Headings">
+            <a class="outline-item is-active" href="#editor"><span class="outline-number">01</span><span>Introduction</span></a>
+            <a class="outline-item" href="#model-section"><span class="outline-number">02</span><span>Model family</span></a>
+            <a class="outline-item" href="#local-section"><span class="outline-number">03</span><span>Local inference</span></a>
+            <a class="outline-item" href="#controls-section"><span class="outline-number">04</span><span>Autocomplete controls</span></a>
+          </nav>
+          <div class="rail-footer">
+            <span class="caption">Private by default</span>
+            <span class="caption">Notes stay in this tab</span>
+            <span class="caption">Prompts run locally</span>
+          </div>
+        </aside>
+
+        <section class="editor-region" aria-labelledby="document-title">
+          <div class="document-toolbar">
+            <div>
+              <span id="document-title" class="document-name">untitled.md</span>
+              <span class="toolbar-separator" aria-hidden="true">·</span>
+              <span id="word-count" class="caption">0 words</span>
+            </div>
+            <span class="document-type">Plain text</span>
+          </div>
+          <div id="editor-scroll" class="editor-scroll">
+            <div class="editor-content">
+              <div class="editor-kicker">Working note <span aria-hidden="true">/</span> 5.3 preview</div>
+              <h1 class="editor-title">A small model for the next sentence.</h1>
+              <div class="editor-frame">
+                <div class="line-gutter" aria-hidden="true" id="line-gutter">1</div>
+                <div class="writing-surface">
+                  <div class="editor-mirror" aria-hidden="true"><span id="typed-copy"></span><span id="ghost-copy" class="ghost-copy"></span></div>
+                  <label class="sr-only" for="editor">Write a note</label>
+                  <textarea id="editor" spellcheck="true" autocomplete="off" autocapitalize="sentences" aria-describedby="editor-help">MLLM-5.3 is a trainable family of compact language models. </textarea>
+                  <div id="suggestion-tray" class="suggestion-tray" role="status" aria-live="polite" aria-atomic="true" hidden>
+                    <div class="suggestion-topline"><span class="overline">Suggestion</span><span id="suggestion-model" class="mono-caption">578K</span></div>
+                    <p id="suggestion-text"></p>
+                    <div class="suggestion-actions"><span id="suggestion-confidence" class="caption">Local continuation</span><button id="accept-button" class="text-action" type="button">Accept <kbd>Tab</kbd></button></div>
+                  </div>
+                </div>
+              </div>
+              <p id="editor-help" class="editor-help"><kbd>Tab</kbd> accept suggestion <span class="help-separator">•</span> <kbd>Esc</kbd> dismiss <span class="help-separator">•</span> <kbd>⌘</kbd><kbd>↵</kbd> accept suggestion</p>
+              <section id="model-section" class="document-section">
+                <span class="overline">02 / Model family</span>
+                <p>Three size tiers share one from-scratch recurrent architecture. Pick the smallest model that keeps your writing flow intact.</p>
+              </section>
+              <section id="local-section" class="document-section">
+                <span class="overline">03 / Local inference</span>
+                <p>The editor loads the checkpoint into a worker. Prompts, completions, and sampling stay in this browser tab.</p>
+              </section>
+              <section id="controls-section" class="document-section last-section">
+                <span class="overline">04 / Autocomplete controls</span>
+                <p>Change the temperature and top-k values in the inspector, then keep typing. Every accepted suggestion becomes part of the next context window.</p>
+              </section>
+            </div>
+          </div>
+          <footer class="editor-status">
+            <span id="cursor-status">Ln 1, Col 1</span>
+            <span class="status-separator" aria-hidden="true">·</span>
+            <span id="latency-status">Waiting for model</span>
+            <span class="editor-status-spacer"></span>
+            <span class="status-toggle"><span class="status-dot ready" aria-hidden="true"></span> Autocomplete on</span>
+          </footer>
+        </section>
+
+        <aside id="inspector" class="inspector-scroll" aria-label="Model inspector">
+          <div class="inspector-heading"><span class="overline">Model inspector</span><span class="inspector-state" id="inspector-state">Local</span></div>
+          <section class="inspector-section">
+            <div class="section-label-row"><label for="inspector-model">Model size</label><span class="mono-caption" id="parameter-count">578,864 params</span></div>
+            <select id="inspector-model" class="wide-select">
+              <option value="578K">578K / fast</option>
+              <option value="2.4M">2.4M / balanced</option>
+              <option value="6.0M">6.0M / fuller context</option>
+            </select>
+            <p class="inspector-note" id="model-description">A 183-wide tied-embedding GRU for quick inline suggestions.</p>
+          </section>
+          <section class="inspector-section">
+            <div class="section-label-row"><label for="temperature">Temperature</label><output id="temperature-value" for="temperature">0.25</output></div>
+            <input id="temperature" type="range" min="0" max="1" step="0.05" value="0.25">
+            <div class="range-labels"><span>focused</span><span>varied</span></div>
+          </section>
+          <section class="inspector-section">
+            <div class="section-label-row"><label for="top-k">Top-k</label><output id="top-k-value" for="top-k">32</output></div>
+            <input id="top-k" type="range" min="4" max="96" step="4" value="32">
+            <div class="range-labels"><span>narrow</span><span>open</span></div>
+          </section>
+          <section class="inspector-section context-section">
+            <div class="section-label-row"><span class="section-label">Recent context</span><span id="context-count" class="mono-caption">0 chars</span></div>
+            <div id="context-preview" class="context-preview">Start writing to give the model a local context window.</div>
+          </section>
+          <section class="inspector-section inspector-guide">
+            <div class="section-label-row"><span class="section-label">Keyboard</span><span class="mono-caption">in editor</span></div>
+            <div class="shortcut-row"><kbd>Tab</kbd><span>accept</span></div>
+            <div class="shortcut-row"><kbd>Esc</kbd><span>dismiss</span></div>
+            <div class="shortcut-row"><kbd>⌘</kbd><kbd>↵</kbd><span>accept suggestion</span></div>
+          </section>
+          <div id="worker-error" class="inspector-error" hidden></div>
+        </aside>
+      </main>
+    </div>
+    <div id="live-region" class="sr-only" aria-live="polite"></div>
+    <script type="module" src="app.js?v=4"></script>
+  </body>
+</html>
