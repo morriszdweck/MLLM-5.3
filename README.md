@@ -1,63 +1,110 @@
-# MLLM-5.3 Preview 578K
+# MLLM-5.3
 
-MLLM-5.3 Preview 578K is a small, trainable neural autocomplete model. It learns to predict the next word or punctuation token from a short left context and can run locally with no server.
+MLLM-5.3 is a from-scratch, trainable family of compact recurrent language models for local autocomplete. The repository is the preview release surface: model files are named only by parameter size, and more sizes are planned.
 
-> **Preview:** This is the first small proof-of-concept checkpoint. More model sizes are planned. The 578K model is not a final release and should not be treated as a general-purpose language model.
+> Preview: these checkpoints are small autocomplete models, not general-purpose assistants. They learn patterns from the supplied MLLM-5.2 corpus and can be inspected, retrained, and run locally.
 
-## Current model
+## Models
 
-- 577,533 trainable parameters
-- 4-token context window
-- 4,381-token vocabulary
-- 32-dimensional token embeddings
-- 96-unit `tanh` hidden layer
-- Softmax next-token prediction
-- Adam optimization implemented with NumPy
-- Portable `.npz` checkpoint
+| Artifact | Parameters | Architecture | Best for |
+|---|---:|---|---|
+| `578K.npz` | 578,864 | 183-wide single-layer GRU, tied embedding/output | Fast inline suggestions |
+| `2.4M.npz` | 2,429,256 | 380-wide single-layer GRU, tied embedding/output | Balanced local autocomplete |
+| `6.0M.npz` | 6,038,532 | 530-wide single-layer GRU, tied embedding/output | Highest-capacity preview |
 
-The model was trained on a small, repetitive autocomplete corpus. It is best at reproducing the style and phrases represented in that corpus.
+Every model uses a byte-fallback tokenizer with frequent text chunks, so unseen words remain representable. The checkpoint also carries a compact prefix memory learned from the training split; exact known prefixes use that high-confidence continuation, while other contexts use the trained GRU. The size labels count neural parameters only. Training uses PyTorch; inference and checkpoint loading use NumPy. The browser demo runs the same GRU equations inside a Web Worker with float16 web exports.
 
 ## Quick start
 
-Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
+Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/). Run from the repository root:
 
 ```bash
-uv run outputs/train_mllm53.py generate \
-  outputs/mllm53_tiny.npz \
+uv run train_mllm53.py generate \
+  578K.npz \
   "What is an atom" \
   --max-tokens 18 \
   --temperature 0 \
   --seed 7
 ```
 
-Example output:
-
-```text
-What is an atom atoms are the basic particles of the chemical elements and the fundamental building blocks of matter.
-```
-
-## Train your own checkpoint
-
-The training corpus is supplied as a command-line input so you can use your own text:
+Inspect a checkpoint:
 
 ```bash
-uv run outputs/train_mllm53.py train path/to/corpus.txt \
-  --checkpoint outputs/my_model.npz \
-  --epochs 18 \
-  --batch-size 512 \
-  --learning-rate 0.003 \
-  --seed 7
+uv run train_mllm53.py inspect 578K.npz
 ```
 
-The corpus is split by paragraph into training and validation sequences. The tokenizer recognizes words plus `.`, `!`, and `?`.
+Open the editor locally after exporting browser artifacts:
+
+```bash
+python3 -m http.server 4173 --directory site
+open http://127.0.0.1:4173/
+```
+
+## Reproduce the training data
+
+The extractor reads the embedded `BUILT_IN_CORPUS` literals from each MLLM-5.2 model. It handles the nested Golden corpus explicitly and writes clean per-source files plus a deduplicated combined corpus and manifest.
+
+```bash
+uv run extract_mllm52_corpora.py /path/to/MLLM-5.2 \
+  --output-dir work/mllm52_corpora
+```
+
+The released preview was trained from `work/mllm52_corpora/combined.txt`; raw source corpora are not copied into the repository. See `work/mllm52_corpora/manifest.json` for hashes and counts.
+
+## Train models
+
+Train one tier:
+
+```bash
+uv run train_mllm53.py train 578K work/mllm52_corpora/combined.txt \
+  --output 578K.npz \
+  --steps 10000 \
+  --sequence-length 128 \
+  --device cpu
+```
+
+Train all preview tiers:
+
+```bash
+uv run train_mllm53.py train-all work/mllm52_corpora/combined.txt \
+  --output-dir . \
+  --steps 10000 \
+  --sequence-length 128 \
+  --device cpu
+```
+
+The run uses a fixed seed, a 90/10 ordered holdout, AdamW, warmup plus cosine decay, gradient clipping, and saves the best validation checkpoint. Run `uv run train_mllm53.py --help` for all options.
+
+## Browser export
+
+Export a checkpoint to the float16 JSON format used by the static editor:
+
+```bash
+uv run export_mllm53_web.py 578K.npz site/models/578K.json
+```
+
+The editor is in `site/`. `site/showcase.html` is the primitive state harness used before the product screen.
+
+Deploy the editor as a new Netlify site:
+
+```bash
+npx netlify deploy --prod --dir=site
+```
+
+The included `netlify.toml` publishes `site/` and keeps the exported model artifacts cacheable.
 
 ## Files
 
-- `outputs/mllm53_model.py` - model, tokenizer, optimizer, and checkpoint serialization
-- `outputs/train_mllm53.py` - `train` and `generate` commands
-- `outputs/mllm53_tiny.npz` - trained MLLM-5.3 Preview 578K checkpoint
-- `outputs/test_mllm53_model.py` - unit and checkpoint round-trip tests
+- `mllm53_model.py` - tokenizer, architecture metadata, NumPy inference, and NPZ serialization
+- `mllm53_training.py` - PyTorch GRU, data split, optimizer, scheduler, and validation loop
+- `train_mllm53.py` - train, train-all, generate, and inspect commands
+- `extract_mllm52_corpora.py` - safe AST-based MLLM-5.2 corpus extraction and provenance manifest
+- `export_mllm53_web.py` - float16 browser artifact exporter
+- `578K.npz`, `2.4M.npz`, `6.0M.npz` - trained preview checkpoints
+- `model_manifest.json` - corpus provenance, training settings, hashes, and validation metrics
+- `site/` - offline-capable browser editor and Web Worker runtime
+- `DESIGN.md` - editor design system, research log, and accessibility contract
 
-## Roadmap
+## License and status
 
-Planned future preview sizes include larger neural models, longer context windows, improved tokenization, better confidence scoring, quantized inference, and browser/editor integration. The architecture and checkpoint format may change before the stable 5.3 release.
+Released under the repository license. MLLM-5.3 is a preview release: additional sizes, longer-context variants, quantization, and stronger evaluation are planned.

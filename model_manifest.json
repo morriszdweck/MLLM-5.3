@@ -1,0 +1,59 @@
+{
+  "release": "MLLM-5.3",
+  "status": "preview",
+  "architecture": "single-layer GRU with tied embedding/output weights, byte-fallback tokenizer, and a compact train-split prefix memory",
+  "parameter_count_excludes_prefix_memory": true,
+  "corpus": {
+    "source_repository": "https://github.com/morriszdweck/MLLM-5.2",
+    "source_ref": "4089ca8",
+    "combined_sha256": "6dd6af763f1d5025dd921bcc1912b25a227e089e76bea9ec0a2f63009c4f0c6b",
+    "combined_chars": 10331718,
+    "combined_utf8_bytes": 10324380,
+    "combined_units": 12135,
+    "prefix_memory_snippets": 10349
+  },
+  "training": {
+    "steps": 10000,
+    "sequence_length": 128,
+    "seed": 7,
+    "optimizer": "AdamW",
+    "learning_rate": 0.002,
+    "weight_decay": 0.01,
+    "schedule": "100-step warmup followed by cosine decay",
+    "gradient_clipping": 1.0,
+    "validation_split": 0.1,
+    "device": "cpu"
+  },
+  "models": {
+    "578K": {
+      "parameters": 578864,
+      "checkpoint": "578K.npz",
+      "checkpoint_sha256": "81e7ce7e99b589a4b315e181595b70e3702092f075b5730996e498d6af581bab",
+      "checkpoint_bytes": 3342576,
+      "browser_artifact": "site/models/578K.json",
+      "browser_artifact_sha256": "28b4c64c1d040f6294fa6604f87c9e2624fe1ec57f245501213efbd8439f52a9",
+      "browser_artifact_bytes": 3625030,
+      "best_validation_loss": 2.1110594669977822
+    },
+    "2.4M": {
+      "parameters": 2429256,
+      "checkpoint": "2.4M.npz",
+      "checkpoint_sha256": "56d1cd8c40dd4fb7498aa1b41236f6a1b43a5581b4624bf6e0796ad5d9c41e08",
+      "checkpoint_bytes": 10236314,
+      "browser_artifact": "site/models/2.4M.json",
+      "browser_artifact_sha256": "afea2e42f6ea7deeebc10e4a924345b9162ec1f6dac83cbb5f620fa158a7e9b2",
+      "browser_artifact_bytes": 8588219,
+      "best_validation_loss": 2.1299105882644653
+    },
+    "6.0M": {
+      "parameters": 6038532,
+      "checkpoint": "6.0M.npz",
+      "checkpoint_sha256": "5bbf5dc1b74521dbea2784b639168903cabc8da058054d213a234ad7ee788264",
+      "checkpoint_bytes": 23679567,
+      "browser_artifact": "site/models/6.0M.json",
+      "browser_artifact_sha256": "21e0597cea35aadf3580e3db59d21da0c8dc9abed3a5ccafff196b2cc4fb0538",
+      "browser_artifact_bytes": 18271819,
+      "best_validation_loss": 2.3701470692952475
+    }
+  }
+}

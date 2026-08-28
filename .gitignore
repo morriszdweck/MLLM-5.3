@@ -1,4 +1,11 @@
 __pycache__/
 .pytest_cache/
+.ruff_cache/
 *.py[cod]
 .DS_Store
+.venv/
+work/
+.netlify/
+.codegraph
+outputs/
+site/models/*.json

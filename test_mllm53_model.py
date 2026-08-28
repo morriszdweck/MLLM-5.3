@@ -1,56 +1,76 @@
 from __future__ import annotations
 
-from pathlib import Path
+from dataclasses import replace
 
 import numpy as np
 
 from mllm53_model import (
-    ModelConfig,
-    TinyAutocompleteModel,
-    load_checkpoint,
-    make_examples,
-    save_checkpoint,
-    tokenize_corpus,
+    MODEL_CONFIGS,
+    Checkpoint,
+    GenerationOptions,
+    NumpyAutocompleteModel,
+    PrefixMemory,
+    Tokenizer,
 )
 
 
-def test_tokenize_corpus_keeps_paragraph_boundaries() -> None:
-    sequences = tokenize_corpus("Hi.\n\nBye!")
-
-    assert sequences == [["hi", ".", "<eos>"], ["bye", "!", "<eos>"]]
-
-
-def test_make_examples_pads_short_contexts() -> None:
-    vocab = ["<bos>", "<eos>", "<unk>", "a", "b"]
-
-    contexts, targets = make_examples([["a", "b", "<eos>"]], vocab, context_size=4)
-
-    assert contexts.shape == (3, 4)
-    assert targets.tolist() == [3, 4, 1]
-    assert contexts[0].tolist() == [0, 0, 0, 0]
-
-
-def test_model_learns_a_repeated_character_sequence() -> None:
-    config = ModelConfig(context_size=3, embedding_size=8, hidden_size=16)
-    model = TinyAutocompleteModel(vocab_size=4, config=config, seed=7)
-    contexts = np.asarray([[0, 0, 2], [0, 2, 3]], dtype=np.int64)
-    targets = np.asarray([3, 2], dtype=np.int64)
-    first_loss = model.train_batch(contexts, targets, learning_rate=0.05)
-
-    for _ in range(60):
-        model.train_batch(contexts, targets, learning_rate=0.05)
-
-    assert model.loss(contexts, targets) < first_loss
+def _checkpoint() -> Checkpoint:
+    config = MODEL_CONFIGS["578K"]
+    tokenizer = Tokenizer.fit("hello world hello model", vocab_size=config.vocab_size)
+    embedding = np.zeros((config.vocab_size, config.embedding_size), dtype=np.float32)
+    weight_ih = np.zeros(
+        (3 * config.hidden_size, config.embedding_size), dtype=np.float32
+    )
+    weight_hh = np.zeros((3 * config.hidden_size, config.hidden_size), dtype=np.float32)
+    bias_ih = np.zeros(3 * config.hidden_size, dtype=np.float32)
+    bias_hh = np.zeros(3 * config.hidden_size, dtype=np.float32)
+    output_bias = np.zeros(config.vocab_size, dtype=np.float32)
+    return Checkpoint(
+        config=config,
+        tokenizer=tokenizer,
+        embedding=embedding,
+        weight_ih=weight_ih,
+        weight_hh=weight_hh,
+        bias_ih=bias_ih,
+        bias_hh=bias_hh,
+        output_bias=output_bias,
+    )
 
 
-def test_checkpoint_round_trip_preserves_predictions(tmp_path: Path) -> None:
-    config = ModelConfig(context_size=3, embedding_size=8, hidden_size=16)
-    model = TinyAutocompleteModel(vocab_size=4, config=config, seed=7)
-    contexts = np.asarray([[0, 0, 2], [0, 2, 3]], dtype=np.int64)
-    checkpoint = tmp_path / "model.npz"
+def test_size_tier_parameter_counts() -> None:
+    assert MODEL_CONFIGS["578K"].parameter_count == 578_864
+    assert MODEL_CONFIGS["2.4M"].parameter_count == 2_429_256
+    assert MODEL_CONFIGS["6.0M"].parameter_count == 6_038_532
 
-    save_checkpoint(checkpoint, model, ["<bos>", "<eos>", "a", "b"])
-    restored, vocabulary = load_checkpoint(checkpoint)
 
-    assert vocabulary == ["<bos>", "<eos>", "a", "b"]
-    np.testing.assert_allclose(model.logits(contexts), restored.logits(contexts))
+def test_tokenizer_round_trips_unicode_with_byte_fallback() -> None:
+    tokenizer = Tokenizer.fit("Hello, world!", vocab_size=300)
+    text = "Hello, π world!"
+    assert tokenizer.decode(tokenizer.encode(text)) == text
+
+
+def test_checkpoint_round_trip_and_deterministic_generation(tmp_path) -> None:
+    checkpoint = _checkpoint()
+    path = tmp_path / "578K.npz"
+    checkpoint.save(path)
+    loaded = Checkpoint.load(path)
+    first = NumpyAutocompleteModel(loaded).generate(
+        "hello", GenerationOptions(max_tokens=5, temperature=0.0, seed=7)
+    )
+    second = NumpyAutocompleteModel(loaded).generate(
+        "hello", GenerationOptions(max_tokens=5, temperature=0.0, seed=7)
+    )
+    assert first == second
+
+
+def test_prefix_memory_uses_longest_known_suffix() -> None:
+    memory = PrefixMemory.from_text(
+        "What is an atom- Atoms are the basic particles of matter.\n\n"
+        "What is a molecule- A molecule is a group of atoms."
+    )
+    assert memory.match("What is an atom- ") == "Atoms are the basic particles of matter."
+    checkpoint = replace(_checkpoint(), memory=memory.to_json())
+    completion = NumpyAutocompleteModel(checkpoint).generate(
+        "What is an atom- ", GenerationOptions(max_tokens=3, temperature=0.0)
+    )
+    assert completion.startswith("Ato")
